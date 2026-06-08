@@ -1,0 +1,26 @@
+# Ziel-Container für den Self-Healing Watchdog.
+# Bewusst KEINE Docker-Restart-Policy ("restart: no"): das Wiederherstellen ausgefallener
+# Container übernimmt später der Watchdog bzw. der Camunda-Prozess, nicht Docker selbst.
+services:
+  target-service-a:
+    image: nginx:alpine
+    container_name: target-service-a
+    ports:
+      - "8081:80"
+    restart: "no"
+    # HEALTHCHECK, damit der Watchdog später echten Health-Status auslesen kann.
+    # nginx:alpine bringt busybox-wget mit, daher kein curl nötig.
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost/"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  target-service-b:
+    image: nginx:alpine
+    container_name: target-service-b
+    ports:
+      - "8082:80"
+    restart: "no"
+    # Bewusst ohne HEALTHCHECK: zweiter Container ohne Health-Status zum Vergleich.
