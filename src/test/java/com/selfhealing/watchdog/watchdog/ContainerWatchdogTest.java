@@ -15,10 +15,10 @@ import com.selfhealing.watchdog.docker.ContainerStatus;
 import com.selfhealing.watchdog.docker.DockerService;
 import java.util.List;
 import org.camunda.bpm.engine.RuntimeService;
+import org.camunda.bpm.engine.runtime.ProcessInstanceQuery;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -28,8 +28,11 @@ class ContainerWatchdogTest {
     @Mock
     private DockerService dockerService;
 
-    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    @Mock
     private RuntimeService runtimeService;
+
+    @Mock
+    private ProcessInstanceQuery processInstanceQuery;
 
     private WatchdogProperties properties;
     private ContainerWatchdog watchdog;
@@ -75,7 +78,7 @@ class ContainerWatchdogTest {
     void startsRecoveryProcessWhenNoActiveInstanceExists() {
         properties.setTargetContainers(List.of("target-x"));
         when(dockerService.listTargetContainers()).thenReturn(List.of()); // target-x ist GONE
-        when(activeCountQuery()).thenReturn(0L);
+        stubActiveRecoveryCount(0L);
 
         watchdog.poll();
 
@@ -87,7 +90,7 @@ class ContainerWatchdogTest {
     void skipsRecoveryWhenActiveInstanceAlreadyExists() {
         properties.setTargetContainers(List.of("target-x"));
         when(dockerService.listTargetContainers()).thenReturn(List.of()); // target-x ist GONE
-        when(activeCountQuery()).thenReturn(1L);
+        stubActiveRecoveryCount(1L);
 
         watchdog.poll();
 
@@ -106,13 +109,13 @@ class ContainerWatchdogTest {
                 .startProcessInstanceByKey(anyString(), anyString(), anyMap());
     }
 
-    /** Fluent De-Dup-Query auf dem Deep-Stub-Mock — liefert die Anzahl aktiver Instanzen. */
-    private long activeCountQuery() {
-        return runtimeService.createProcessInstanceQuery()
-                .processDefinitionKey(anyString())
-                .processInstanceBusinessKey(anyString())
-                .active()
-                .count();
+    /** Stubbt die De-Dup-Query so, dass sie die angegebene Anzahl aktiver Instanzen meldet. */
+    private void stubActiveRecoveryCount(long count) {
+        when(runtimeService.createProcessInstanceQuery()).thenReturn(processInstanceQuery);
+        when(processInstanceQuery.processDefinitionKey(anyString())).thenReturn(processInstanceQuery);
+        when(processInstanceQuery.processInstanceBusinessKey(anyString())).thenReturn(processInstanceQuery);
+        when(processInstanceQuery.active()).thenReturn(processInstanceQuery);
+        when(processInstanceQuery.count()).thenReturn(count);
     }
 
     private static ContainerStatus status(String name, boolean running, ContainerHealth health, String state) {

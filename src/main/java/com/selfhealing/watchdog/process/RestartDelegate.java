@@ -55,10 +55,8 @@ public class RestartDelegate implements JavaDelegate {
 
     private Duration backoffFor(int attempt) {
         WatchdogProperties.Backoff backoff = properties.getBackoff();
-        // Exponent deckeln, um Long-Überlauf bei sehr vielen Versuchen zu vermeiden.
-        int exponent = Math.min(attempt - 1, 16);
-        long waitMillis = backoff.getBase().toMillis() * (1L << exponent);
-        long cappedMillis = Math.min(waitMillis, backoff.getMaxWait().toMillis());
-        return Duration.ofMillis(cappedMillis);
+        // Exponentielles Backoff: base * 2^(Versuch-1), gedeckelt auf max-wait.
+        long waitMillis = backoff.getBase().toMillis() * (long) Math.pow(2, attempt - 1);
+        return Duration.ofMillis(Math.min(waitMillis, backoff.getMaxWait().toMillis()));
     }
 }

@@ -16,9 +16,6 @@ public class WatchdogProperties {
     /** Maximale Anzahl an Restart-Versuchen, bevor eskaliert wird. */
     private int restartAttempts = 3;
 
-    /** Zeitfenster, in dem ein neugestarteter Container "healthy" werden muss. */
-    private Duration healthCheckTimeout = Duration.ofSeconds(30);
-
     /** Namen der zu überwachenden Container. */
     private List<String> targetContainers = List.of();
 
@@ -40,14 +37,6 @@ public class WatchdogProperties {
 
     public void setRestartAttempts(int restartAttempts) {
         this.restartAttempts = restartAttempts;
-    }
-
-    public Duration getHealthCheckTimeout() {
-        return healthCheckTimeout;
-    }
-
-    public void setHealthCheckTimeout(Duration healthCheckTimeout) {
-        this.healthCheckTimeout = healthCheckTimeout;
     }
 
     public List<String> getTargetContainers() {

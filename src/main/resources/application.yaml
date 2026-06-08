@@ -34,7 +34,6 @@ management:
 watchdog:
   poll-interval: 10s
   restart-attempts: 3
-  health-check-timeout: 30s
   # Exponentielles Backoff zwischen Neustart-Versuchen: base * 2^(Versuch-1), gedeckelt.
   backoff:
     base: 2s
