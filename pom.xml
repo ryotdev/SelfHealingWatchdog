@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.3</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.selfhealing</groupId>
+    <artifactId>watchdog</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>watchdog</name>
+    <description>Self-Healing Container Watchdog: überwacht Docker-Container und steuert die
+        Wiederherstellung über einen eingebetteten Camunda-BPMN-Prozess.</description>
+
+    <properties>
+        <java.version>21</java.version>
+        <!-- Camunda 7.24.x ist laut offizieller Matrix kompatibel mit Spring Boot 3.5.x. -->
+        <camunda.version>7.24.0</camunda.version>
+        <docker-java.version>3.5.1</docker-java.version>
+    </properties>
+
+    <dependencies>
+        <!-- Web-Oberfläche: Health-/Chaos-Endpoints, hält den Dienst als Server am Leben. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <!-- JDBC-Stack (HikariCP + Transaction-Manager) für die Camunda-Datasource. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+
+        <!-- Eingebettete Camunda-Prozess-Engine (BPMN-gesteuerte Wiederherstellung). -->
+        <dependency>
+            <groupId>org.camunda.bpm.springboot</groupId>
+            <artifactId>camunda-bpm-spring-boot-starter</artifactId>
+            <version>${camunda.version}</version>
+        </dependency>
+
+        <!-- Docker-API-Zugriff: HttpClient5-Transport statt Jersey (schlanker). -->
+        <dependency>
+            <groupId>com.github.docker-java</groupId>
+            <artifactId>docker-java-core</artifactId>
+            <version>${docker-java.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.docker-java</groupId>
+            <artifactId>docker-java-transport-httpclient5</artifactId>
+            <version>${docker-java.version}</version>
+        </dependency>
+
+        <!-- In-Memory-Datenbank für die Prozess-Engine (Prototyp, keine externe DB nötig). -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
