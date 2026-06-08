@@ -1,5 +1,6 @@
 package com.selfhealing.watchdog.process;
 
+import com.github.dockerjava.api.exception.NotFoundException;
 import com.selfhealing.watchdog.docker.ContainerHealth;
 import com.selfhealing.watchdog.docker.ContainerStatus;
 import com.selfhealing.watchdog.docker.DockerService;
@@ -30,12 +31,19 @@ public class HealthCheckDelegate implements JavaDelegate {
     @Override
     public void execute(DelegateExecution execution) {
         String containerName = (String) execution.getVariable("containerName");
-        ContainerStatus status = dockerService.inspect(containerName);
-        boolean recovered = status.running()
-                && (status.health() == ContainerHealth.HEALTHY || status.health() == ContainerHealth.NONE);
-        execution.setVariable("recovered", recovered);
+        try {
+            ContainerStatus status = dockerService.inspect(containerName);
+            boolean recovered = status.running()
+                    && (status.health() == ContainerHealth.HEALTHY || status.health() == ContainerHealth.NONE);
+            execution.setVariable("recovered", recovered);
 
-        log.info("Health-Check für {}: running={}, health={} -> recovered={}",
-                containerName, status.running(), status.health(), recovered);
+            log.info("Health-Check für {}: running={}, health={} -> recovered={}",
+                    containerName, status.running(), status.health(), recovered);
+        } catch (NotFoundException e) {
+            // Container zwischen Neustart und Health-Check verschwunden: nicht wiederhergestellt.
+            // Läuft so sauber über Retry/Eskalation statt einen Camunda-Incident zu erzeugen.
+            execution.setVariable("recovered", false);
+            log.info("Health-Check für {}: Container nicht vorhanden -> recovered=false", containerName);
+        }
     }
 }
