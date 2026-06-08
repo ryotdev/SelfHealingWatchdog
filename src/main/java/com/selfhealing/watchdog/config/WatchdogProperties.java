@@ -16,6 +16,9 @@ public class WatchdogProperties {
     /** Maximale Anzahl an Restart-Versuchen, bevor eskaliert wird. */
     private int restartAttempts = 3;
 
+    /** Wartezeit nach einem Neustart, bevor der Health-Check erfolgt (BPMN-Timer). */
+    private Duration restartWait = Duration.ofSeconds(5);
+
     /** Zeitfenster, in dem ein neugestarteter Container "healthy" werden muss. */
     private Duration healthCheckTimeout = Duration.ofSeconds(30);
 
@@ -38,6 +41,14 @@ public class WatchdogProperties {
 
     public void setRestartAttempts(int restartAttempts) {
         this.restartAttempts = restartAttempts;
+    }
+
+    public Duration getRestartWait() {
+        return restartWait;
+    }
+
+    public void setRestartWait(Duration restartWait) {
+        this.restartWait = restartWait;
     }
 
     public Duration getHealthCheckTimeout() {

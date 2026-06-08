@@ -47,6 +47,12 @@
             <artifactId>camunda-bpm-spring-boot-starter</artifactId>
             <version>${camunda.version}</version>
         </dependency>
+        <!-- Cockpit/Tasklist/Admin-Weboberfläche unter /camunda (für Demo/Doku/Screenshots). -->
+        <dependency>
+            <groupId>org.camunda.bpm.springboot</groupId>
+            <artifactId>camunda-bpm-spring-boot-starter-webapp</artifactId>
+            <version>${camunda.version}</version>
+        </dependency>
 
         <!-- Docker-API-Zugriff: HttpClient5-Transport statt Jersey (schlanker). -->
         <dependency>

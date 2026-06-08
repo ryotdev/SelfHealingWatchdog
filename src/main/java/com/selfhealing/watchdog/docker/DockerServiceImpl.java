@@ -42,6 +42,11 @@ public class DockerServiceImpl implements DockerService {
                 toContainerHealth(state.getHealth()));
     }
 
+    @Override
+    public void restart(String containerName) {
+        dockerClient.restartContainerCmd(containerName).exec();
+    }
+
     private static ContainerHealth toContainerHealth(HealthState health) {
         if (health == null || health.getStatus() == null) {
             return ContainerHealth.NONE;

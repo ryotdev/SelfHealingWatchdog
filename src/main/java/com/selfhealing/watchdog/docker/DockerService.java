@@ -17,4 +17,11 @@ public interface DockerService {
      * @param containerName Name oder ID des Containers
      */
     ContainerStatus inspect(String containerName);
+
+    /**
+     * Startet einen Container neu (stoppt ihn ggf. und startet ihn wieder).
+     *
+     * @param containerName Name oder ID des Containers
+     */
+    void restart(String containerName);
 }

@@ -1,6 +1,11 @@
 package com.selfhealing.watchdog.watchdog;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.selfhealing.watchdog.config.WatchdogProperties;
@@ -8,9 +13,11 @@ import com.selfhealing.watchdog.docker.ContainerHealth;
 import com.selfhealing.watchdog.docker.ContainerStatus;
 import com.selfhealing.watchdog.docker.DockerService;
 import java.util.List;
+import org.camunda.bpm.engine.RuntimeService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -20,13 +27,16 @@ class ContainerWatchdogTest {
     @Mock
     private DockerService dockerService;
 
+    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    private RuntimeService runtimeService;
+
     private WatchdogProperties properties;
     private ContainerWatchdog watchdog;
 
     @BeforeEach
     void setUp() {
         properties = new WatchdogProperties();
-        watchdog = new ContainerWatchdog(dockerService, properties);
+        watchdog = new ContainerWatchdog(dockerService, properties, runtimeService);
     }
 
     @Test
@@ -58,6 +68,39 @@ class ContainerWatchdogTest {
                 .thenReturn(status("c-starting", true, ContainerHealth.STARTING, "running"));
 
         assertThat(watchdog.detectFailures()).isEmpty();
+    }
+
+    @Test
+    void startsRecoveryProcessWhenNoActiveInstanceExists() {
+        properties.setTargetContainers(List.of("target-x"));
+        when(dockerService.listTargetContainers()).thenReturn(List.of()); // target-x ist GONE
+        when(activeCountQuery()).thenReturn(0L);
+
+        watchdog.poll();
+
+        verify(runtimeService).startProcessInstanceByKey(
+                eq(ContainerWatchdog.RECOVERY_PROCESS_KEY), eq("target-x"), anyMap());
+    }
+
+    @Test
+    void skipsRecoveryWhenActiveInstanceAlreadyExists() {
+        properties.setTargetContainers(List.of("target-x"));
+        when(dockerService.listTargetContainers()).thenReturn(List.of()); // target-x ist GONE
+        when(activeCountQuery()).thenReturn(1L);
+
+        watchdog.poll();
+
+        verify(runtimeService, never())
+                .startProcessInstanceByKey(anyString(), anyString(), anyMap());
+    }
+
+    /** Fluent De-Dup-Query auf dem Deep-Stub-Mock — liefert die Anzahl aktiver Instanzen. */
+    private long activeCountQuery() {
+        return runtimeService.createProcessInstanceQuery()
+                .processDefinitionKey(anyString())
+                .processInstanceBusinessKey(anyString())
+                .active()
+                .count();
     }
 
     private static ContainerStatus status(String name, boolean running, ContainerHealth health, String state) {

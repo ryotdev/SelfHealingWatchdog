@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_Recovery"
+                  targetNamespace="http://selfhealing.com/bpmn"
+                  exporter="self-healing-watchdog" exporterVersion="1.0">
+  <bpmn:process id="container-recovery" name="Container Recovery" isExecutable="true"
+                camunda:historyTimeToLive="P7D">
+
+    <bpmn:startEvent id="StartEvent_1" name="Ausfall erkannt">
+      <bpmn:outgoing>Flow_Start</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:serviceTask id="Task_Restart" name="Neustart"
+                      camunda:delegateExpression="${restartDelegate}">
+      <bpmn:incoming>Flow_Start</bpmn:incoming>
+      <bpmn:incoming>Flow_Retry</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToTimer</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:intermediateCatchEvent id="Timer_Wait" name="Hochfahren abwarten">
+      <bpmn:incoming>Flow_ToTimer</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToHealth</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_Wait">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">${timerWait}</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:serviceTask id="Task_HealthCheck" name="Health-Check"
+                      camunda:delegateExpression="${healthCheckDelegate}">
+      <bpmn:incoming>Flow_ToHealth</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToGateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:exclusiveGateway id="Gateway_Recovered" name="recovered?" default="Flow_ToEscalation">
+      <bpmn:incoming>Flow_ToGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Success</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Retry</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ToEscalation</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:endEvent id="End_Success" name="Wiederherstellung erfolgreich">
+      <bpmn:incoming>Flow_Success</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:serviceTask id="Task_Escalate" name="Menschliche Hilfe"
+                      camunda:delegateExpression="${escalationDelegate}">
+      <bpmn:incoming>Flow_ToEscalation</bpmn:incoming>
+      <bpmn:outgoing>Flow_EscalateEnd</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="End_Escalated" name="Eskaliert">
+      <bpmn:incoming>Flow_EscalateEnd</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_Start" sourceRef="StartEvent_1" targetRef="Task_Restart" />
+    <bpmn:sequenceFlow id="Flow_ToTimer" sourceRef="Task_Restart" targetRef="Timer_Wait" />
+    <bpmn:sequenceFlow id="Flow_ToHealth" sourceRef="Timer_Wait" targetRef="Task_HealthCheck" />
+    <bpmn:sequenceFlow id="Flow_ToGateway" sourceRef="Task_HealthCheck" targetRef="Gateway_Recovered" />
+    <bpmn:sequenceFlow id="Flow_Success" sourceRef="Gateway_Recovered" targetRef="End_Success">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${recovered}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Retry" sourceRef="Gateway_Recovered" targetRef="Task_Restart">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${!recovered &amp;&amp; attempts &lt; maxAttempts}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_ToEscalation" sourceRef="Gateway_Recovered" targetRef="Task_Escalate" />
+    <bpmn:sequenceFlow id="Flow_EscalateEnd" sourceRef="Task_Escalate" targetRef="End_Escalated" />
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="container-recovery">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="160" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Restart_di" bpmnElement="Task_Restart">
+        <dc:Bounds x="250" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Timer_Wait_di" bpmnElement="Timer_Wait">
+        <dc:Bounds x="412" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_HealthCheck_di" bpmnElement="Task_HealthCheck">
+        <dc:Bounds x="500" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Recovered_di" bpmnElement="Gateway_Recovered" isMarkerVisible="true">
+        <dc:Bounds x="662" y="95" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Success_di" bpmnElement="End_Success">
+        <dc:Bounds x="774" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Escalate_di" bpmnElement="Task_Escalate">
+        <dc:Bounds x="637" y="230" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Escalated_di" bpmnElement="End_Escalated">
+        <dc:Bounds x="774" y="252" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_Start_di" bpmnElement="Flow_Start">
+        <di:waypoint x="196" y="120" />
+        <di:waypoint x="250" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToTimer_di" bpmnElement="Flow_ToTimer">
+        <di:waypoint x="350" y="120" />
+        <di:waypoint x="412" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToHealth_di" bpmnElement="Flow_ToHealth">
+        <di:waypoint x="448" y="120" />
+        <di:waypoint x="500" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToGateway_di" bpmnElement="Flow_ToGateway">
+        <di:waypoint x="600" y="120" />
+        <di:waypoint x="662" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Success_di" bpmnElement="Flow_Success">
+        <di:waypoint x="712" y="120" />
+        <di:waypoint x="774" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Retry_di" bpmnElement="Flow_Retry">
+        <di:waypoint x="687" y="95" />
+        <di:waypoint x="687" y="40" />
+        <di:waypoint x="300" y="40" />
+        <di:waypoint x="300" y="80" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToEscalation_di" bpmnElement="Flow_ToEscalation">
+        <di:waypoint x="687" y="145" />
+        <di:waypoint x="687" y="230" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_EscalateEnd_di" bpmnElement="Flow_EscalateEnd">
+        <di:waypoint x="737" y="270" />
+        <di:waypoint x="774" y="270" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

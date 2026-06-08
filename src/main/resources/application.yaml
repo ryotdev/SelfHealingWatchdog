@@ -19,6 +19,10 @@ camunda:
     # Job-Executor wird mit dem Anwendungsstart aktiviert.
     job-execution:
       deployment-aware: true
+    # Login für die Camunda-Webapps (Cockpit/Tasklist/Admin) unter /camunda.
+    admin-user:
+      id: admin
+      password: admin
 
 management:
   endpoints:
@@ -30,6 +34,7 @@ management:
 watchdog:
   poll-interval: 10s
   restart-attempts: 3
+  restart-wait: 5s
   health-check-timeout: 30s
   target-containers:
     - target-service-a
