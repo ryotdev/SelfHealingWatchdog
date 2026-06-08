@@ -1,0 +1,66 @@
+package com.selfhealing.watchdog.watchdog;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
+
+import com.selfhealing.watchdog.config.WatchdogProperties;
+import com.selfhealing.watchdog.docker.ContainerHealth;
+import com.selfhealing.watchdog.docker.ContainerStatus;
+import com.selfhealing.watchdog.docker.DockerService;
+import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+@ExtendWith(MockitoExtension.class)
+class ContainerWatchdogTest {
+
+    @Mock
+    private DockerService dockerService;
+
+    private WatchdogProperties properties;
+    private ContainerWatchdog watchdog;
+
+    @BeforeEach
+    void setUp() {
+        properties = new WatchdogProperties();
+        watchdog = new ContainerWatchdog(dockerService, properties);
+    }
+
+    @Test
+    void flagsGoneNotRunningAndUnhealthyAsFailures() {
+        properties.setTargetContainers(List.of("c-gone", "c-stopped", "c-unhealthy"));
+        // c-gone fehlt in der Liste der existierenden Container -> GONE
+        when(dockerService.listTargetContainers()).thenReturn(List.of("c-stopped", "c-unhealthy"));
+        when(dockerService.inspect("c-stopped"))
+                .thenReturn(status("c-stopped", false, ContainerHealth.NONE, "exited"));
+        when(dockerService.inspect("c-unhealthy"))
+                .thenReturn(status("c-unhealthy", true, ContainerHealth.UNHEALTHY, "running"));
+
+        assertThat(watchdog.detectFailures()).containsExactlyInAnyOrder(
+                new ContainerFailure("c-gone", FailureReason.GONE),
+                new ContainerFailure("c-stopped", FailureReason.NOT_RUNNING),
+                new ContainerFailure("c-unhealthy", FailureReason.UNHEALTHY));
+    }
+
+    @Test
+    void doesNotFlagRunningHealthyStartingOrWithoutHealthcheck() {
+        properties.setTargetContainers(List.of("c-healthy", "c-none", "c-starting"));
+        when(dockerService.listTargetContainers())
+                .thenReturn(List.of("c-healthy", "c-none", "c-starting"));
+        when(dockerService.inspect("c-healthy"))
+                .thenReturn(status("c-healthy", true, ContainerHealth.HEALTHY, "running"));
+        when(dockerService.inspect("c-none"))
+                .thenReturn(status("c-none", true, ContainerHealth.NONE, "running"));
+        when(dockerService.inspect("c-starting"))
+                .thenReturn(status("c-starting", true, ContainerHealth.STARTING, "running"));
+
+        assertThat(watchdog.detectFailures()).isEmpty();
+    }
+
+    private static ContainerStatus status(String name, boolean running, ContainerHealth health, String state) {
+        return new ContainerStatus(name, "id-" + name, running, state, health);
+    }
+}
