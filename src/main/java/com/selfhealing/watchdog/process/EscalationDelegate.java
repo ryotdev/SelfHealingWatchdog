@@ -1,25 +1,27 @@
 package com.selfhealing.watchdog.process;
 
-import org.camunda.bpm.engine.delegate.DelegateExecution;
-import org.camunda.bpm.engine.delegate.JavaDelegate;
+import org.camunda.bpm.engine.delegate.DelegateTask;
+import org.camunda.bpm.engine.delegate.TaskListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
- * Service-Task "Menschliche Hilfe": Eskalation, wenn der Container nach allen Versuchen nicht
- * wiederhergestellt werden konnte. Loggt klar auf ERROR-Level.
+ * Task-Create-Listener am Eskalations-User-Task: hält die Eskalation klar im Log sichtbar
+ * (ERROR), während der Prozess am User-Task auf manuellen Abschluss in der Tasklist wartet.
  */
 @Component
-public class EscalationDelegate implements JavaDelegate {
+public class EscalationDelegate implements TaskListener {
 
     private static final Logger log = LoggerFactory.getLogger(EscalationDelegate.class);
 
     @Override
-    public void execute(DelegateExecution execution) {
-        String containerName = (String) execution.getVariable("containerName");
-        Integer maxAttempts = (Integer) execution.getVariable("maxAttempts");
-        log.error("Eskalation: {} nach {} Versuchen nicht wiederhergestellt — menschliche Hilfe nötig.",
-                containerName, maxAttempts);
+    public void notify(DelegateTask delegateTask) {
+        String containerName = (String) delegateTask.getVariable("containerName");
+        Object attempts = delegateTask.getVariable("attempts");
+        Object maxAttempts = delegateTask.getVariable("maxAttempts");
+        log.error("Eskalation: {} nicht wiederhergestellt (Versuche {}/{}) — menschliche Hilfe nötig, "
+                        + "Task '{}' wartet in der Tasklist.",
+                containerName, attempts, maxAttempts, delegateTask.getName());
     }
 }

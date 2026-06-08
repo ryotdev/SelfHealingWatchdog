@@ -8,6 +8,9 @@
                   id="Definitions_Recovery"
                   targetNamespace="http://selfhealing.com/bpmn"
                   exporter="self-healing-watchdog" exporterVersion="1.0">
+
+  <bpmn:error id="Error_RestartFailed" name="Restart Failed" errorCode="RESTART_FAILED" />
+
   <bpmn:process id="container-recovery" name="Container Recovery" isExecutable="true"
                 camunda:historyTimeToLive="P7D">
 
@@ -21,6 +24,12 @@
       <bpmn:incoming>Flow_Retry</bpmn:incoming>
       <bpmn:outgoing>Flow_ToTimer</bpmn:outgoing>
     </bpmn:serviceTask>
+
+    <bpmn:boundaryEvent id="Boundary_RestartFailed" name="Neustart fehlgeschlagen"
+                        attachedToRef="Task_Restart">
+      <bpmn:outgoing>Flow_BoundaryToEscalation</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrDef_RestartFailed" errorRef="Error_RestartFailed" />
+    </bpmn:boundaryEvent>
 
     <bpmn:intermediateCatchEvent id="Timer_Wait" name="Hochfahren abwarten">
       <bpmn:incoming>Flow_ToTimer</bpmn:incoming>
@@ -47,11 +56,14 @@
       <bpmn:incoming>Flow_Success</bpmn:incoming>
     </bpmn:endEvent>
 
-    <bpmn:serviceTask id="Task_Escalate" name="Menschliche Hilfe"
-                      camunda:delegateExpression="${escalationDelegate}">
+    <bpmn:userTask id="Task_Escalate" name="Menschliche Hilfe" camunda:assignee="admin">
+      <bpmn:extensionElements>
+        <camunda:taskListener event="create" delegateExpression="${escalationDelegate}" />
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_ToEscalation</bpmn:incoming>
+      <bpmn:incoming>Flow_BoundaryToEscalation</bpmn:incoming>
       <bpmn:outgoing>Flow_EscalateEnd</bpmn:outgoing>
-    </bpmn:serviceTask>
+    </bpmn:userTask>
 
     <bpmn:endEvent id="End_Escalated" name="Eskaliert">
       <bpmn:incoming>Flow_EscalateEnd</bpmn:incoming>
@@ -68,6 +80,7 @@
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${!recovered &amp;&amp; attempts &lt; maxAttempts}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_ToEscalation" sourceRef="Gateway_Recovered" targetRef="Task_Escalate" />
+    <bpmn:sequenceFlow id="Flow_BoundaryToEscalation" sourceRef="Boundary_RestartFailed" targetRef="Task_Escalate" />
     <bpmn:sequenceFlow id="Flow_EscalateEnd" sourceRef="Task_Escalate" targetRef="End_Escalated" />
 
   </bpmn:process>
@@ -97,6 +110,9 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="End_Escalated_di" bpmnElement="End_Escalated">
         <dc:Bounds x="774" y="252" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_RestartFailed_di" bpmnElement="Boundary_RestartFailed">
+        <dc:Bounds x="282" y="142" width="36" height="36" />
       </bpmndi:BPMNShape>
 
       <bpmndi:BPMNEdge id="Flow_Start_di" bpmnElement="Flow_Start">
@@ -128,6 +144,12 @@
       <bpmndi:BPMNEdge id="Flow_ToEscalation_di" bpmnElement="Flow_ToEscalation">
         <di:waypoint x="687" y="145" />
         <di:waypoint x="687" y="230" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_BoundaryToEscalation_di" bpmnElement="Flow_BoundaryToEscalation">
+        <di:waypoint x="300" y="178" />
+        <di:waypoint x="300" y="400" />
+        <di:waypoint x="687" y="400" />
+        <di:waypoint x="687" y="310" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_EscalateEnd_di" bpmnElement="Flow_EscalateEnd">
         <di:waypoint x="737" y="270" />
