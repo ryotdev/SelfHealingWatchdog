@@ -26,8 +26,14 @@ management:
       exposure:
         include: health,info
 
-# Watchdog-spezifische Einstellungen — werden später an config.WatchdogProperties gebunden.
+# Watchdog-spezifische Einstellungen — gebunden an config.WatchdogProperties.
 watchdog:
   poll-interval: 10s
   restart-attempts: 3
   health-check-timeout: 30s
+  target-containers:
+    - target-service-a
+    - target-service-b
+  docker:
+    # Windows/Docker-Desktop: Named-Pipe. Unter Linux/Mac: unix:///var/run/docker.sock
+    host: npipe:////./pipe/docker_engine
