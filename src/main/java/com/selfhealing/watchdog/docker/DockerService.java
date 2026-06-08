@@ -24,4 +24,10 @@ public interface DockerService {
      * @param containerName Name oder ID des Containers
      */
     void restart(String containerName);
+
+    /** Stoppt einen Container (für das Chaos-Werkzeug). */
+    void stop(String containerName);
+
+    /** Entfernt einen Container, auch wenn er läuft (für das Chaos-Werkzeug). */
+    void remove(String containerName);
 }

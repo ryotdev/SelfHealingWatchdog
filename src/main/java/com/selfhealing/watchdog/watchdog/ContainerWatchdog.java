@@ -41,8 +41,13 @@ public class ContainerWatchdog {
 
     @Scheduled(fixedDelayString = "${watchdog.poll-interval}")
     public void poll() {
-        for (ContainerFailure failure : detectFailures()) {
-            triggerRecovery(failure);
+        try {
+            for (ContainerFailure failure : detectFailures()) {
+                triggerRecovery(failure);
+            }
+        } catch (RuntimeException e) {
+            // z. B. Docker-Daemon nicht erreichbar: warnen, nicht abstürzen, beim nächsten Poll weiter.
+            log.warn("Poll übersprungen — Überwachung fehlgeschlagen (Docker erreichbar?): {}", e.getMessage());
         }
     }
 

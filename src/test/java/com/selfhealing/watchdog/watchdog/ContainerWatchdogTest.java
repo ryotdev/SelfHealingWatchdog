@@ -1,6 +1,7 @@
 package com.selfhealing.watchdog.watchdog;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -90,6 +91,17 @@ class ContainerWatchdogTest {
 
         watchdog.poll();
 
+        verify(runtimeService, never())
+                .startProcessInstanceByKey(anyString(), anyString(), anyMap());
+    }
+
+    @Test
+    void pollSurvivesWhenDockerIsUnavailable() {
+        properties.setTargetContainers(List.of("target-x"));
+        when(dockerService.listTargetContainers())
+                .thenThrow(new RuntimeException("Docker-Daemon nicht erreichbar"));
+
+        assertThatCode(() -> watchdog.poll()).doesNotThrowAnyException();
         verify(runtimeService, never())
                 .startProcessInstanceByKey(anyString(), anyString(), anyMap());
     }

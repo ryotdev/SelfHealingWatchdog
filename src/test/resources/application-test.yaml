@@ -1,0 +1,4 @@
+# Test-Profil: leere Zielliste, damit der @Scheduled-Poller in Tests nicht gegen echte
+# Container läuft. Die Überwachungslogik wird in ContainerWatchdogTest gezielt getestet.
+watchdog:
+  target-containers: []

@@ -24,3 +24,19 @@ services:
       - "8082:80"
     restart: "no"
     # Bewusst ohne HEALTHCHECK: zweiter Container ohne Health-Status zum Vergleich.
+
+  # Testszenario 3 "dauerhaft fehlerhaft": läuft zwar, der HEALTHCHECK schlägt aber
+  # absichtlich immer fehl -> bleibt auch nach Neustarts UNHEALTHY. Der Watchdog schöpft
+  # die Restart-Versuche aus und eskaliert über das Gateway.
+  target-service-c:
+    image: nginx:alpine
+    container_name: target-service-c
+    ports:
+      - "8083:80"
+    restart: "no"
+    healthcheck:
+      test: ["CMD-SHELL", "exit 1"]
+      interval: 5s
+      timeout: 2s
+      retries: 1
+      start_period: 0s

@@ -27,10 +27,11 @@ public class RestartDelegate implements JavaDelegate {
     public void execute(DelegateExecution execution) {
         String containerName = (String) execution.getVariable("containerName");
         Integer previousAttempts = (Integer) execution.getVariable("attempts");
+        Object maxAttempts = execution.getVariable("maxAttempts");
         int attempt = (previousAttempts == null ? 0 : previousAttempts) + 1;
         execution.setVariable("attempts", attempt);
 
-        log.info("Neustart-Versuch {} für Container {}", attempt, containerName);
+        log.info("Neustart-Versuch {}/{} für Container {}", attempt, maxAttempts, containerName);
         try {
             dockerService.restart(containerName);
         } catch (RuntimeException e) {

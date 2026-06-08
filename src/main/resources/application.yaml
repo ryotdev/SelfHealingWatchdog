@@ -39,6 +39,7 @@ watchdog:
   target-containers:
     - target-service-a
     - target-service-b
+    - target-service-c
   docker:
     # Windows/Docker-Desktop: Named-Pipe. Unter Linux/Mac: unix:///var/run/docker.sock
     host: npipe:////./pipe/docker_engine
