@@ -16,14 +16,13 @@ public class WatchdogProperties {
     /** Maximale Anzahl an Restart-Versuchen, bevor eskaliert wird. */
     private int restartAttempts = 3;
 
-    /** Wartezeit nach einem Neustart, bevor der Health-Check erfolgt (BPMN-Timer). */
-    private Duration restartWait = Duration.ofSeconds(5);
-
     /** Zeitfenster, in dem ein neugestarteter Container "healthy" werden muss. */
     private Duration healthCheckTimeout = Duration.ofSeconds(30);
 
     /** Namen der zu überwachenden Container. */
     private List<String> targetContainers = List.of();
+
+    private Backoff backoff = new Backoff();
 
     private Docker docker = new Docker();
 
@@ -43,14 +42,6 @@ public class WatchdogProperties {
         this.restartAttempts = restartAttempts;
     }
 
-    public Duration getRestartWait() {
-        return restartWait;
-    }
-
-    public void setRestartWait(Duration restartWait) {
-        this.restartWait = restartWait;
-    }
-
     public Duration getHealthCheckTimeout() {
         return healthCheckTimeout;
     }
@@ -67,12 +58,46 @@ public class WatchdogProperties {
         this.targetContainers = targetContainers;
     }
 
+    public Backoff getBackoff() {
+        return backoff;
+    }
+
+    public void setBackoff(Backoff backoff) {
+        this.backoff = backoff;
+    }
+
     public Docker getDocker() {
         return docker;
     }
 
     public void setDocker(Docker docker) {
         this.docker = docker;
+    }
+
+    /** Exponentielles Backoff für die Wartezeit zwischen Neustart-Versuchen. */
+    public static class Backoff {
+
+        /** Basis-Wartezeit; Versuch n wartet {@code base * 2^(n-1)} (klein halten für Demo/Eval). */
+        private Duration base = Duration.ofSeconds(2);
+
+        /** Obergrenze für die Wartezeit. */
+        private Duration maxWait = Duration.ofSeconds(30);
+
+        public Duration getBase() {
+            return base;
+        }
+
+        public void setBase(Duration base) {
+            this.base = base;
+        }
+
+        public Duration getMaxWait() {
+            return maxWait;
+        }
+
+        public void setMaxWait(Duration maxWait) {
+            this.maxWait = maxWait;
+        }
     }
 
     /** Verbindungseinstellungen für die Docker-API. */

@@ -69,8 +69,8 @@ public class ContainerWatchdog {
         variables.put("containerName", containerName);
         variables.put("attempts", 0);
         variables.put("maxAttempts", properties.getRestartAttempts());
-        // BPMN-Timer erwartet eine ISO-8601-Dauer (Duration.toString() liefert z. B. "PT5S").
-        variables.put("timerWait", properties.getRestartWait().toString());
+        // Die Backoff-Wartezeit (Prozessvariable "timerWait") setzt der RestartDelegate je Versuch,
+        // bevor das Timer-Event sie liest.
 
         runtimeService.startProcessInstanceByKey(RECOVERY_PROCESS_KEY, containerName, variables);
     }
